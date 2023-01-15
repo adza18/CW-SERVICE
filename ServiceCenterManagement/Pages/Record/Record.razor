@@ -1,0 +1,287 @@
+﻿@page "/record";
+@using ServiceCenterManagement.Data;
+@using ServiceCenterManagement.Data.Model;
+
+@*A razor page that displays list of orders and functionalities that can be performed with an order*@
+
+
+
+<h3>Record</h3>
+<ul class="nav nav-tabs">
+    <li class="nav-item ">
+        <a class='nav-link btn @(_tabFilter == "All" ? "active" : "")' @onclick='()=>TabFilter("All")'>All</a>
+    </li>
+    <li class="nav-item">
+        <a class='nav-link btn @(_tabFilter == "Approved" ? "active" : "")' @onclick='()=>TabFilter("Approved")'>Approved</a>
+    </li>
+    <li class="nav-item">
+        <a class='nav-link btn @(_tabFilter == "Pending" ? "active" : "")' @onclick='()=>TabFilter("Pending")'>Pending</a>
+    </li>
+</ul>
+
+<table class="table">
+    <thead>
+        <tr>
+      
+             <th>
+                <div class="d-flex align-items-center justify-content-start" >
+                    <span>Ordered date</span>
+                    <a class='ms-0  ps-0 btn text-@(_sortBy == "orderdate" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("orderdate")'>
+                        <i class="bi bi-sort-@(_sortBy=="orderdate" ? _sortDirection : "up")"></i>
+                    </a>
+                </div>
+            </th>
+            <th>
+              Ordered item
+            </th>
+            <th>
+                Requested by
+            </th>
+            <th>
+                <div class="d-flex align-items-center justify-content-start">
+                    <span>Quantity requested</span>
+                    <a class='ms-0  ps-0 btn text-@(_sortBy == "qty" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("qty")'>
+                        <i class="bi bi-sort-@(_sortBy=="qty" ? _sortDirection : "up")"></i>
+                    </a>
+                </div>
+            </th>
+            <th>
+                <div class="d-flex align-items-center justify-content-start">
+                    <span>Quantity total</span>
+                    <a class='ms-0  ps-0 btn text-@(_sortBy == "total" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("total")'>
+                        <i class="bi bi-sort-@(_sortBy=="total" ? _sortDirection : "up")"></i>
+                    </a>
+                </div>
+            </th>
+            <th> Approval status</th>
+            <th> Updated by</th>
+            <th> Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            IEnumerable<RecordModel> recordList = _records;
+            IEnumerable<UserModel> userList = _users;
+            if (_tabFilter == "Approved")
+            {
+                recordList = recordList.Where(x => x.IsApproved);
+            }
+            else if (_tabFilter == "Pending")
+            {
+                recordList = recordList.Where(x => !x.IsApproved);
+            }
+            if (_sortBy == "orderdate")
+            {
+                recordList = _sortDirection == "up" ? recordList.OrderBy(t => t.OrderedDate) : recordList.OrderByDescending(t =>
+                t.OrderedDate);
+            }
+            else if (_sortBy == "qty")
+            {
+                recordList = _sortDirection == "up" ? recordList.OrderBy(t => t.QuantityTakenOut) : recordList.OrderByDescending(t =>
+                t.QuantityTakenOut);
+            }
+            else if (_sortBy == "total")
+            {
+                recordList = _sortDirection == "up" ? recordList.OrderBy(t => t.OrderTotal) : recordList.OrderByDescending(t =>
+                t.OrderTotal);
+            }
+
+            foreach (var record in recordList)
+            {
+                <tr>
+                    <td>@record.OrderedDate.ToString("MMM dd, yyyy h:mm tt")</td>
+                    <td>
+                        @{
+                            var item = ItemService.GetByItemId(record.ItemId);
+                            <span>@(item == null ? "Unknown" : item.Name)</span>
+
+                        }
+                    </td>
+                    <td>
+                        @{
+                            var requestedBy = UserService.GetUserById(record.RequestedBy);
+                            <span>@(requestedBy == null ? "Unknown" : requestedBy.UserName)</span>
+
+                        }
+                    </td>
+                    <td>@record.QuantityTakenOut</td>
+                    <td>
+                        <strong>Npr </strong>@record.OrderTotal
+                    </td>
+                    <td>
+                    @if (record.Status == OrderStatus.Approved)
+                    {
+                        <span class="text-success">@record.Status</span>
+                    }
+                    else if (record.Status == OrderStatus.Rejected)
+                    {
+                        <span class="text-danger">@record.Status</span>
+                    }
+                    else
+                    {
+                        <span class="text-primary">@record.Status</span>
+
+                    }
+                    </td>
+                    <td>
+                        @{
+                            var approvedBy = UserService.GetUserById(record.ApprovedBy);
+                            <span>@(approvedBy == null ? "Not yet updated" : approvedBy.UserName)</span>
+                        }
+                    </td>
+                    <td>
+                        <button disabled="@(record.Status == OrderStatus.Pending ? false: true)" class="btn btn-outline-primary fs--small" type="button" @onclick="()=>OpenApproveDialog(record)" data-bs-toggle="tooltip" data-bs-placement="top" title="Approve">
+                            <i class="bi bi-check-circle-fill"></i> 
+                        </button>
+                        <button disabled="@(record.Status == OrderStatus.Pending ? false: true)" class="btn btn-outline-danger fs--small" type="button" @onclick="()=>OpenRejectDialog(record)" data-bs-toggle="tooltip" data-bs-placement="top" title="Reject">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </td>
+
+
+
+                </tr>
+            }
+
+        }
+
+    </tbody>
+
+</table>
+
+@if (_showApprovalDialog)
+{
+    <Modal Title="@_dialogTitle" OnClose="@OnApproveDialogClose" OkLabel="@_dialogOkLabel">
+        <div>Are you sure you want to approve?</div>
+        @if (!string.IsNullOrEmpty(_approvalErrorMessage))
+        {
+            <Toaster Text="@_approvalErrorMessage" Type="warning"></Toaster>
+        }
+    </Modal>
+}
+@if (_showRejectDialog)
+{
+    <Modal Title="@_dialogTitle" OnClose="@OnRejectDialogClose" OkLabel="@_dialogOkLabel">
+        <div>Are you sure you want to reject?</div>
+        @if (!string.IsNullOrEmpty(_rejectErrorMessage))
+        {
+            <Toaster Text="@_rejectErrorMessage" Type="warning"></Toaster>
+        }
+    </Modal>
+}
+@code{
+    [CascadingParameter]
+    private GlobalUser _currentUser { get; set; }
+    private List<RecordModel> _records { get; set; }
+    private List<UserModel> _users{ get; set; }
+    private RecordModel _approveRecord;
+    private string _tabFilter = "All";
+    private string _sortBy = "dueDate";
+    private string _sortDirection = "up";
+
+    private bool _showRejectDialog { get; set; }
+
+    private bool _showApprovalDialog { get; set; }
+    private string _dialogTitle { get; set; }
+    private string _dialogOkLabel { get; set; }
+    private string _approvalErrorMessage { get; set; }
+    private string _rejectErrorMessage { get; set; }
+
+
+
+
+    protected override void OnInitialized()
+    {
+        _records = RecordService.GetRecords();
+    }
+
+    private void OpenApproveDialog(RecordModel record)
+    {
+        _dialogTitle = "Record approval";
+        _dialogOkLabel = "Approve";
+        _approveRecord = record;
+        _showApprovalDialog = true;
+    }
+    private void OpenRejectDialog(RecordModel record)
+    {
+        _dialogTitle = "Reject record";
+        _dialogOkLabel = "Confirm";
+        _approveRecord = record;
+        _showRejectDialog = true;
+    }
+    private void OnApproveDialogClose(Boolean isCancel)
+    {
+        if (isCancel)
+        {
+            _showApprovalDialog = false;
+        }
+        else
+        {
+            try
+            {
+                _approvalErrorMessage = "";
+
+
+                _records = RecordService.UpdateRecord(_approveRecord.Id, _currentUser.PresentUser.Id, OrderStatus.Approved);
+
+
+
+                _showApprovalDialog = false;
+            }
+            catch (Exception e)
+            {
+                _approvalErrorMessage = e.Message;
+
+
+            }
+        }
+    }
+    public void OnRejectDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            _showRejectDialog = false;
+        }
+        else
+        {
+            try
+            {
+                _rejectErrorMessage = "";
+
+
+                _records = RecordService.UpdateRecord(_approveRecord.Id, _currentUser.PresentUser.Id,OrderStatus.Rejected);
+
+
+                _showRejectDialog = false;
+            }
+            catch (Exception e)
+            {
+                _rejectErrorMessage = e.Message;
+
+
+            }
+        }
+    }
+
+    private void SortByHandler(string sortByName)
+    {
+        if (_sortBy == sortByName)
+        {
+            _sortDirection = _sortDirection == "up" ? "down" : "up";
+        }
+        else
+        {
+            _sortBy = sortByName;
+            _sortDirection = "up";
+        }
+    }
+
+    private void TabFilter(string status)
+    {
+        _tabFilter = status;
+    }
+
+}

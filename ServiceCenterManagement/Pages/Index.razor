@@ -1,0 +1,25 @@
+﻿@page "/"
+
+@using ServiceCenterManagement.Data;
+@using ServiceCenterManagement.Data.Model;
+@inject NavigationManager navigate;
+
+@code{
+
+    [CascadingParameter]
+    private GlobalUser _presentUser { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (_presentUser.PresentUser == null)
+        {
+            navigate.NavigateTo("/login");
+        }
+        else
+        {
+            navigate.NavigateTo("/counter");
+
+        }
+    }
+
+}

@@ -1,0 +1,72 @@
+﻿@page "/itemform"
+@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+
+@inject ItemService itemservices
+
+@inject IDialogService DialogService
+
+@using System.ComponentModel.DataAnnotations
+
+
+<h3>ItemForm</h3>
+<form class="row g-3" @onsubmit="AddItem">
+    <div class="col-md-6">
+        <label for="itemName" class="form-label"> Name</label>
+        <input type="text" class="form-control" id="itemName" @bind="_name">
+    </div>
+
+
+    <div class="col-md-6">
+        <label for="stock" class="form-label">Stock</label>
+        <input type="number" class="form-control" id="stock" @bind="_stock">
+    </div>
+    <div class="col-md-6">
+        <label for="desc" class="form-label">Description</label>
+        <input type="text" class="form-control" id="desc" @bind="_desc">
+    </div>
+    <div class="col-md-6">
+        <label for="price" class="form-label">Price</label>
+        <input type="number" class="form-control" id="price" @bind="_price">
+    </div>
+
+
+
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Add</button>
+    </div>
+
+</form>
+
+@code {
+    [CascadingParameter]
+    public GlobalUser _presentUser { get; set; }
+    public string _errorMessage = "";
+    public OrderStatus _action;
+    string[] headings = { "S.No", "Name", "Price", "Desc", "Stock", "Action" };
+    public string _name { get; set; }
+    public int _price { get; set; }
+    public int _stock { get; set; }
+    public string _desc { get; set; }
+    public int _qty { get; set; }
+    public string _dialogTitle { get; set; }
+    public bool _displayAddModal { get; set; }
+    public string _modalTitle { get; set; }
+    public string _modalBtnText { get; set; }
+    public string _buttonText { get; set; }
+    public bool _showItemDialog { get; set; }
+    List<ItemModel> items { get; set; }
+    List<RecordModel> records { get; set; }
+    public void AddItem()
+    {
+        try
+        {
+            items = ItemService.AddItem(Guid.Empty, _name, _stock, _desc, _price);
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+    }
+}

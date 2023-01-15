@@ -1,0 +1,59 @@
+﻿@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+@inherits LayoutComponentBase
+@inject NavigationManager navigate
+
+@*Adding MudBlazor Components*@
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@*Side nav is displayed only when the user is succesfully logged in*@
+
+<div class="page">
+	@if (_presentUser.PresentUser != null)
+	{
+		<CascadingValue Value="@_presentUser">
+
+		<div class="sidebar">
+			<NavMenu UserName="@_presentUser.PresentUser.UserName" Role="@_presentUser.PresentUser.Role" LogoutHandler="LogoutHandler" />
+		</div>
+		</CascadingValue>
+
+	}
+
+	<main>
+		@if (_presentUser.PresentUser != null)
+		{
+			<header class="header-wrapper ">
+				<div>Current time: @DateTime.Now</div>
+				<div>
+					<i class="bi bi-person-circle"></i>
+					<span>@_presentUser.PresentUser?.UserName</span>
+				</div>
+			</header>
+		}
+		<article class="content px-4">
+			<CascadingValue Value="@_presentUser">
+				@Body
+			</CascadingValue>
+		</article>
+	</main>
+</div>
+
+@code {
+	private GlobalUser _presentUser = new();
+
+	protected override void OnInitialized()
+	{
+		UserService.SeedUsers();
+
+	}
+
+	private void LogoutHandler()
+	{
+		_presentUser.PresentUser = null;
+		navigate.NavigateTo("/login");
+	}
+}
+

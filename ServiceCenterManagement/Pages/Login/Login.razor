@@ -1,0 +1,83 @@
+﻿@page "/login";
+@using ServiceCenterManagement.Data;
+@using ServiceCenterManagement.Data.Model;
+
+@inject NavigationManager navigate;
+
+@*A razor page for login*@
+
+
+@*Navigating pages upon login based on the role of users*@
+@if (user != null && _presentUser.PresentUser.Role == UserRole.Admin)
+{
+    <Toaster Text="Logged in successuly" Type="info"></Toaster>
+    navigate.NavigateTo("/dashboard");
+
+}
+else if(user!=null && _presentUser.PresentUser.Role == UserRole.Staff)
+{
+    <Toaster Text="Logged in successuly" Type="info"></Toaster>
+    navigate.NavigateTo("/items");
+}
+
+<div class="d-flex">
+    <div class="login-side p-2">
+        <img src="~/../images/repair.jpg"/>
+    </div>
+    <div class="login-form p-2">
+        <h5 class="pt-3">Welcome back</h5>
+        <div class="row">
+        <form  @onsubmit="LoginUser">
+            <div class="seed-user col-8 mt-4 p-1 text-center">Seed user: admin <br /> Seed password:admin</div>
+                @if (!string.IsNullOrEmpty(_loginError))
+                {
+                    <Toaster Text="@_loginError" Type="danger"></Toaster>
+                }
+
+            <div class="col-8 pt-1">
+                <label for="userName" class="form-label">User Name</label>
+                <input type="text" class="form-control" id="userName" @bind="_userName">
+            </div>
+            <div class="col-8 pt-5">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" @bind="_password">
+            </div>
+            <div class="col-8 pt-5">
+                <button type="submit" class="btn btn-primary w-100 ">Sign in</button>
+            </div>
+          
+
+        </form>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+
+
+@code {
+    [CascadingParameter]
+    private GlobalUser _presentUser { get; set; }
+    private string _userName;
+    private string _password;
+    private UserModel user;
+    public string _loginError { get; set; }
+
+    public void LoginUser()
+    {
+        try
+        {
+            user = _presentUser.PresentUser = UserService.Login(_userName, _password);
+        }
+        catch(Exception e)
+        {
+            _loginError = e.Message;
+        }
+
+    }
+
+}

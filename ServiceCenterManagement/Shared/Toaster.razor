@@ -1,0 +1,12 @@
+﻿@*Displayed when an exception is thrown﻿*@
+
+<div class="alert alert-@Type mt-2 w-50 text-center" role="alert">
+    <span class='oi oi-@(Type == "warning" || Type == "danger" ? "warning" : "info")' /> @Text
+</div>
+
+@code {
+    [Parameter]
+    public string Type { get; set; }
+    [Parameter]
+    public string Text { get; set; }
+}

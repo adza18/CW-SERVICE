@@ -1,0 +1,200 @@
+﻿@page "/users"
+@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+@inject NavigationManager navigate;
+
+@*A razor page that displays the list of users and functionalities that can be perfomed on users*@
+
+<div class="container">
+
+<div>Users</div>
+
+<div class="d-flex justify-content-between">
+        <h3>Users</h3>
+
+        @if (_currentUser.PresentUser?.Role == UserRole.Admin)
+        {
+            <button class="btn btn-primary fs--small" type="button" @onclick="NavigateRegister">
+                <i class="bi bi-person-fill-add"></i> Add users
+            </button>
+
+        }
+
+</div>
+
+ <div class="d-flex mt-3 mb-3 flex-column search-wrapper">
+        <input type="search" class="form-control search" placeholder="Search by username" @oninput="SearchTaskName" />
+ </div>
+
+   <ul class="nav nav-tabs">
+        <li class="nav-item ">
+            <a class='nav-link btn @(_tabFilter == "All" ? "active" : "")' @onclick='()=>TabFilter("All")'>All</a>
+        </li>
+        <li class="nav-item">
+            <a class='nav-link btn @(_tabFilter == "Approved" ? "active" : "")' @onclick='()=>TabFilter("Staff")'>Staff</a>
+        </li>
+        <li class="nav-item">
+            <a class='nav-link btn @(_tabFilter == "Pending" ? "active" : "")' @onclick='()=>TabFilter("Admin")'>Admin</a>
+        </li>
+    </ul>
+
+
+
+    <table class="table table-hover table-responsive">
+    <thead>
+        <tr>
+            <th>Full name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Contact</th>
+            <th>Role</th>
+            <th>Created by</th>
+
+
+
+
+        </tr>
+    </thead>
+    <tbody>
+            @{
+                IEnumerable<UserModel> userList = _users;
+                if (_tabFilter == "Staff")
+                {
+                    userList = userList.Where(x => x.Role == UserRole.Staff);
+                }
+                else if (_tabFilter == "Admin")
+                {
+                    userList = userList.Where(x => x.Role == UserRole.Admin);
+
+                }
+
+            foreach (var user in userList)
+            {
+                <tr>
+                   
+                    <td>@user.FullName</td>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>@user.ContactNo</td>
+                    <td>@user.Role.ToString()</td>
+                        <td>
+                            @{
+                                var createdBy = UserService.GetUserById(user.CreatedBy);
+                                <span>@(createdBy == null ? "Unknown" : createdBy.UserName)</span>
+                            }
+                        </td>
+
+
+
+                    <td>
+                            <button disabled="@(_currentUser.PresentUser != null ? _currentUser.PresentUser.Id == user.Id : false)" class="btn btn-outline-danger fs--small" type="button" @onclick="()=>OpenDeleteUserDialog(user)">
+                            <i class="bi bi-trash-fill"></i> 
+                        </button>
+                    </td>
+
+                   
+
+
+
+                </tr>
+            }
+
+        }
+
+    </tbody>
+
+</table>
+
+@if (_showDeleteDialog)
+{
+    <Modal Title="@_dialogTitle" OnClose="@OnDeleteUserDialogClose" OkLabel="@_dialogOkLabel">
+            <div>Are you sure you want to delete this user @_deleteUser.UserName ?</div>
+             @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+        {
+            <Toaster Text="@_deleteErrorMessage" Type="danger"></Toaster>
+
+        }
+    </Modal>
+
+       
+        
+        
+
+        
+
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private GlobalUser _currentUser { get; set; }
+    public List<UserModel> _users;
+    public UserModel _deleteUser;
+    private string _tabFilter = "All";
+
+    private string _dialogTitle { get; set; }
+    private string _dialogOkLabel { get; set; }
+    private string _deleteErrorMessage { get; set; }
+    private bool _showDeleteDialog{ get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        _users = UserService.GetUsers();
+    }
+    private void SearchTaskName(ChangeEventArgs e)
+    {
+        var searchTerm = e.Value.ToString();
+        if (!string.IsNullOrEmpty(searchTerm) && searchTerm.Length > 2)
+        {
+            _users = UserService.GetUsers().Where(t =>
+            t.UserName.ToLower().Contains(searchTerm.ToLower())).ToList();
+        }
+        else
+        {
+            _users = UserService.GetUsers();
+        }
+    }
+    public void NavigateRegister()
+    {
+        navigate.NavigateTo("/registration");
+    }
+    public void OpenDeleteUserDialog(UserModel user)
+    {
+        _dialogTitle = "Delete users";
+        _dialogOkLabel = "Delete";
+        _deleteUser = user;
+        _showDeleteDialog = true;
+
+    }
+    private void TabFilter(string status)
+    {
+        _tabFilter = status;
+    }
+    public void OnDeleteUserDialogClose(Boolean isCancel)
+    {
+
+        
+            if (isCancel)
+            {
+                _showDeleteDialog = false;
+            }
+            else
+            {
+                try
+                {
+                    _deleteErrorMessage = "";
+                    _users = UserService.Delete(_deleteUser.Id);
+                    _showDeleteDialog = false;
+                }
+                catch (Exception e)
+                {
+                    _deleteErrorMessage = e.Message;
+                }
+            }
+        
+    
+       
+}
+
+}

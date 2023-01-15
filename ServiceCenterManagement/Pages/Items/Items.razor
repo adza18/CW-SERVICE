@@ -1,0 +1,480 @@
+﻿@page "/items"
+@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+@inject ItemService itemservices
+@inject NavigationManager navigate;
+
+@*A razor page that displays list of items and functionalities that can be performed with an item*@
+
+
+
+<div class="container">
+    <div class="d-flex justify-content-between">
+    <h4 class="pb-3">Inventory</h4>
+
+        @*Add item button is accessible to only admin*@
+        @if (_currentUser.PresentUser?.Role == UserRole.Admin)
+        {
+            <div class="d-flex justify-content-end pe-5">
+                <button class="btn btn-primary fs--small" type="button" @onclick="OpenAddItemDialog">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Add items</span>
+                </button>
+            </div>
+        }
+
+
+    </div>
+
+
+    <div class="d-flex mt-3 mb-3 flex-column search-wrapper">
+        <input type="search" class="form-control search" placeholder="Search" @oninput="SearchTaskName" />
+        
+    </div>
+
+
+    <div class="table-responsive-sm">
+    <table class="table">
+    <thead>
+        <tr>
+            <th>
+                <div class="d-flex align-items-center justify-content-start" >
+                    <span>Name</span>
+                    <a class='ms-0  ps-0 btn text-@(_sortBy == "name" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("name")'>
+                        <i class="bi bi-sort-@(_sortBy=="name" ? _sortDirection : "up")"></i>
+                    </a>
+                </div>
+            </th>
+
+           
+            <th>
+                     <div class="d-flex align-items-center justify-content-start">
+                    <span>Stock</span>
+                    <a class='ms-0  ps-0 btn text-@(_sortBy == "stock" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("stock")'>
+                        <i class="bi bi-sort-@(_sortBy=="stock" ? _sortDirection : "up")"></i>
+                    </a>
+                </div>
+            </th>
+            <th>
+                        <div class="d-flex align-items-center justify-content-start">
+                        <span>Price</span>
+
+                        <a class='ms-0  ps-0 btn text-@(_sortBy == "price" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                       @onclick='()=>SortByHandler("price")'>
+                        <i class="bi bi-sort-@(_sortBy=="price" ? _sortDirection : "up")"></i>
+
+                    </a>
+                </div>
+            </th>
+                <th>
+                        <div class="d-flex align-items-center justify-content-start">
+                        <span>Last ordered date</span>
+                        <a class='ms-0  ps-0 btn text-@(_sortBy == "orderDate" ? "primary" : "secondary")' data-mdb-toggle="tooltip"
+                           @onclick='()=>SortByHandler("price")'>
+                            <i class="bi bi-sort-@(_sortBy=="orderDate" ? _sortDirection : "up")"></i>
+
+                        </a>
+                    </div>
+                </th>
+             <th><p>Description</p></th>
+             <th><p>Actions</p></th>
+
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            IEnumerable<ItemModel> itemList = _items;
+            if (_sortBy == "name")
+            {
+                itemList = _sortDirection == "up" ? itemList.OrderBy(t => t.Name) : itemList.OrderByDescending(t =>
+                t.Name);
+            }
+           
+            else if (_sortBy == "stock")
+            {
+                itemList = _sortDirection == "up" ? ItemService.MergeSort(itemList.ToList()) : itemList.OrderByDescending(t =>
+                t.Stock);
+            }
+            else if (_sortBy == "price")
+            {
+                itemList = _sortDirection == "up" ? itemList.OrderBy(t => t.Price) : itemList.OrderByDescending(t =>
+                t.Price);
+            }
+                else if (_sortBy == "orderDate")
+                {
+                    itemList = _sortDirection == "up" ? itemList.OrderBy(t => t.LastOrderedDate) : itemList.OrderByDescending(t =>
+                    t.LastOrderedDate);
+                }
+
+
+            foreach (var item in itemList)
+            {
+                <tr>
+                    <td>
+                      @item.Name
+                    </td>
+                  
+                    <td>
+                        @item.Stock
+                    </td>
+                    <td>
+                        <strong>Npr </strong>@item.Price
+                    </td>
+                        <td>
+                            @item.LastOrderedDate
+                        </td>
+
+
+                    <td>
+                        <button type="button" class="btn btn-secondary fs--small" @onclick="()=>ShowDesc(item)">
+                                Description
+                       </button>
+                    </td>
+                  
+                  
+                    <td>
+
+                            @if (_currentUser.PresentUser?.Role == UserRole.Admin)
+                            {
+                                <button class="btn btn-outline-danger fs--small" type="button" @onclick="()=>OpenDeleteItemDialog(item)" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
+                                    <i class="bi bi-trash-fill"></i> 
+                                </button>
+                                <button class="btn btn-outline-success fs--small" type="button" @onclick="()=>OpenEditDialog(item)" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            }
+                            else
+                            {
+                            <button class="btn btn-outline-primary fs--small ms-1" type="button" @onclick="()=>OpenOrderDialog(item)" data-bs-toggle="tooltip" data-bs-placement="top" title="Order">
+                                <i class="bi bi-bag-plus-fill"></i> 
+                            </button>
+                            }
+                         
+                    </td>
+                    
+
+                           
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+</div>
+
+@if ( _showOrderDialog)
+{
+    <Modal Title="@_dialogTitle" OnClose="@OnOrderItemDialogClose" OkLabel="@_dialogOkLabel">
+        <div class="form-floating">
+            <input id="qty" type="number" class="form-control" @bind="_recordModel.QuantityTakenOut" placeholder="Quantity" />
+            <label for="qty">Quantity</label>
+        </div>
+       @if (!string.IsNullOrEmpty(_orderErrorMessage))
+       {
+                <Toaster Text="@_orderErrorMessage" Type="warning"></Toaster>
+
+            
+        }
+            
+        </Modal>
+   
+    
+}
+
+@if(_showDeleteDialog)
+{
+    <Modal Title="@_dialogTitle" OnClose="@OnDeleteItemDialogClose" OkLabel="@_dialogOkLabel">
+        <div>Are you sure you want to delete this item  @_deleteItem.Name ?</div>
+    </Modal>
+}
+
+
+  @if (_showAddDialog)
+    {
+        <Modal Title="@_dialogTitle" OnClose="@OnAddItemDialogClose" OkLabel="@_dialogOkLabel">
+            <div class="form-floating">
+                <input id="name" type="text" class="form-control" @bind="_addItem.Name" placeholder="Item name" />
+                <label for="name">Item name</label>
+            </div>
+              <div class="form-floating">
+                <input id="desc" type="text" class="form-control" @bind="_addItem.Desc" placeholder="Item description" />
+                <label for="desc">Item Description</label>
+            </div>
+            <div class="form-floating">
+                <input id="qty" type="number" class="form-control" @bind="_addItem.Stock" placeholder="Item stock" />
+                <label for="qty">Item quantity</label>
+            </div>
+            <div class="form-floating">
+                <input id="price" type="number" class="form-control" @bind="_addItem.Price" placeholder="Item price" />
+                <label for="price">Item price</label>
+            </div>
+            @if (!string.IsNullOrEmpty(_addErrorMessage))
+            {
+                <Toaster Text="@_addErrorMessage" Type="warning"></Toaster>
+
+            }
+        </Modal>
+     
+    }
+
+
+    @if (_showEditDialog)
+    {
+        <Modal Title="@_dialogTitle" OnClose="@OnEditItemDialogClose" OkLabel="@_dialogOkLabel">
+           <form>
+                <div class="form-floating">
+                    <input id="name" type="text" class="form-control" @bind="_editItem.Name" placeholder="Item name" />
+                    <label for="name">Item name</label>
+                </div>
+                 <div class="form-floating">
+                    <input id="stock" type="number" class="form-control" @bind="_editItem.Stock" placeholder="Item stock" />
+                    <label for="stock">Item stock</label>
+                </div>
+                <div class="form-floating">
+                    <input id="price" type="number" class="form-control" @bind="_editItem.Price" placeholder="Item price" />
+                    <label for="price">Item price</label>
+                </div>
+           </form>
+            @if (!string.IsNullOrEmpty(_editErrorMessage))
+            {
+                <Toaster Text="@_editErrorMessage" Type="warning"></Toaster>
+
+            }
+        </Modal>
+       
+    }
+
+    @if(_showDescDialog)
+    {
+        <Dialog Title="@_dialogTitle" OnClose="@OnItemDescDialogClose">
+            <div>@_editItem.Desc</div>
+        </Dialog>
+    }
+
+   
+</div>
+
+@code{
+    [CascadingParameter]
+    private GlobalUser _currentUser { get; set; }
+    private bool _showEditDialog { get; set; }
+    private ItemModel _editItem { get; set; }
+    private string _editErrorMessage { get; set; }
+
+
+
+    private bool _showAddDialog { get; set; }
+    private ItemModel _addItem { get; set; }
+    private string _addErrorMessage { get; set; }
+
+
+
+    private bool _showDeleteDialog { get; set; }
+    private ItemModel _deleteItem { get; set; }
+    private string _deleteErrorMessage { get; set; }
+
+
+    public bool _showOrderDialog;
+    private ItemModel _orderItem { get; set; }
+    private string _orderErrorMessage { get; set; }
+    private RecordModel _recordModel { get; set; }
+
+    private bool _showDescDialog;
+
+
+
+
+    private List<ItemModel> _items { get; set; }
+    private List<RecordModel> _records { get; set; }
+
+    private string _dialogTitle { get; set; }
+    public int _orderQty{ get; set; }
+    private string _dialogOkLabel { get; set; }
+
+
+
+    private string _tabFilter = "All";
+    private string _sortBy = "dueDate";
+    private string _sortDirection = "up";
+
+    protected override void OnInitialized()
+    {
+        _items = ItemService.GetItems();
+    }
+    private void SearchTaskName(ChangeEventArgs e)
+    {
+        var searchTerm = e.Value.ToString();
+        if (!string.IsNullOrEmpty(searchTerm) && searchTerm.Length > 2)
+        {
+            _items = ItemService.GetItems().Where(t =>
+            t.Name.ToLower().Contains(searchTerm.ToLower())).ToList();
+        }
+        else
+        {
+            _items = ItemService.GetItems();
+        }
+    }
+
+
+    private void OpenAddItemDialog()
+    {
+        _dialogTitle = "Add item";
+        _dialogOkLabel = "Add";
+        _addItem = new ItemModel();
+        _addItem.Id = Guid.Empty;
+        _showAddDialog = true;
+    }
+    private void OpenEditDialog(ItemModel item)
+    {
+        _dialogTitle = "Edit item";
+        _dialogOkLabel = "Edit";
+        _editItem = item;
+        _showEditDialog = true;
+    }
+    private void ShowDesc(ItemModel item)
+    {
+        _dialogTitle = "Item desc";
+        _editItem = item;
+        _showDescDialog = true;
+    }
+    private void OpenOrderDialog(ItemModel item)
+    {
+        _orderItem = item;
+        _dialogTitle = "Order item";
+        _dialogOkLabel = "Order";
+        _recordModel = new RecordModel();
+        _showOrderDialog = true;
+    }
+    private void OnItemDescDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            _showDescDialog = false;
+        }
+    }
+    private void OnEditItemDialogClose(bool isCancel)
+    {
+        if(isCancel)
+        {
+            _showEditDialog = false; 
+        }
+        else
+        {
+            try
+            {
+                _editErrorMessage = "";
+
+                _items = ItemService.UpdateItem(_editItem.Id, _editItem.Name, _editItem.Stock,_editItem.Price, _currentUser.PresentUser.Id);
+
+                _showEditDialog = false;
+            }
+            catch (Exception e)
+            {
+                _editErrorMessage = e.Message;
+            }
+        }
+
+
+    }
+
+    private void OnAddItemDialogClose(bool isCancel)
+    {
+        if (isCancel)
+        {
+            _showAddDialog = false;
+        }
+        else
+        {
+            try
+            {
+                _addErrorMessage = "";
+                if (_addItem.Id == Guid.Empty)
+                {
+                    _items = ItemService.AddItem(_addItem.Id,_addItem.Name,_addItem.Stock,_addItem.Desc, _addItem.Price);
+                }
+
+                _showAddDialog = false;
+            }
+            catch (Exception e)
+            {
+                _addErrorMessage = e.Message;
+            }
+        }
+    }
+
+    private void OpenDeleteItemDialog(ItemModel item)
+    {
+        _deleteItem = item;
+        _dialogTitle = "Delete item";
+        _dialogOkLabel = "Delete";
+        _showDeleteDialog = true;
+    }
+
+    private void OnOrderItemDialogClose(Boolean isCancel)
+    {
+        if (isCancel)
+        {
+            _showOrderDialog = false;
+        }
+        else
+        {
+            try
+            {
+                _orderErrorMessage = "";
+                _records = RecordService.RecordLog(_currentUser.PresentUser.Id, _orderItem.Id, _recordModel.QuantityTakenOut);
+                _showOrderDialog = false;
+            }
+            catch (Exception e)
+            {
+                _orderErrorMessage = e.Message;
+            }
+        }
+    }
+  
+
+
+    private void OnDeleteItemDialogClose(Boolean isCancel)
+    {
+        if (isCancel)
+        {
+            _showDeleteDialog = false;
+        }
+        else
+        {
+            try
+            {
+                _deleteErrorMessage = "";
+
+                _items = ItemService.Delete(_deleteItem.Id);
+
+                _showDeleteDialog = false;
+            }
+            catch (Exception e)
+            {
+                _orderErrorMessage = e.Message;
+            }
+        }
+    }
+
+    private void SortByHandler(string sortByName)
+    {
+        if (_sortBy == sortByName)
+        {
+            _sortDirection = _sortDirection == "up" ? "down" : "up";
+        }
+        else
+        {
+            _sortBy = sortByName;
+            _sortDirection = "up";
+        }
+    }
+
+
+
+    private void TabFilter(string status)
+    {
+        _tabFilter = status;
+    }
+
+}

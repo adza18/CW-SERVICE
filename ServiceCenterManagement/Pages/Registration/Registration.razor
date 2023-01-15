@@ -1,0 +1,103 @@
+﻿
+@page "/registration"
+@using ServiceCenterManagement.Data;
+@using ServiceCenterManagement.Data.Model;
+
+@inject UserService userservices
+@inject UtilService utilservices
+@inject NavigationManager navigate;
+
+@*A razor page for user registration*@
+
+
+<h3>Registration</h3>
+
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <Toaster Text="@_errorMessage" Type="danger"></Toaster>
+}
+
+@if (user!=null)
+{
+    <Toaster Text="Registered successuly" Type="success"></Toaster>
+    navigate.NavigateTo("/users");
+
+}
+
+<form class="row g-3" @onsubmit="registerUser">
+    <div class="col-md-6">
+        <label for="fullName" class="form-label">Full Name</label>
+        <input type="text" class="form-control" id="fullName" @bind="_fullName">
+    </div>
+    <div class="col-md-6">
+        <label for="userName" class="form-label">User Name</label>
+        <input type="text" class="form-control" id="userName" @bind="_userName">
+    </div>
+    <div class="col-md-6">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" @bind="_email">
+    </div>
+
+    <div class="col-md-6">
+        <label for="role" class="form-label">Role</label>
+      
+            <select @bind="_selectedRole" class="form-select">
+                <option value="select" selected>Select role</option>
+                <option value="@UserRole.Staff">Staff</option>
+                <option value="@UserRole.Admin">Admin</option>
+            </select>
+    </div>
+    <div class="col-md-6">
+        <label for="contact" class="form-label">Contact</label>
+        <input type="text" class="form-control" id="contact" @bind="_contact">
+    </div>
+    <div class="col-md-6">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" @bind="_password">
+    </div>
+   
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Register</button>
+    </div>
+
+   
+</form>
+
+@code {
+    [CascadingParameter]
+    private GlobalUser _currentUser { get; set; }
+    private string _errorMessage = "";
+
+    private string _fullName { get; set; }
+
+    private string _password { get; set; }
+
+    private string _userName { get; set; }
+
+    private string _email { get; set; }
+
+    private string _contact { get; set; }
+
+    private UserRole _selectedRole { get; set; }
+
+
+    private List<UserModel> user;
+
+    public void registerUser()
+    {
+        try
+        {
+            user = UserService.Register(Guid.Empty, _fullName, _userName, _email, _contact, _password, _selectedRole, _currentUser.PresentUser.Id);
+        }
+        catch(Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+    }
+    public void NavigateDashboard()
+    {
+        navigate.NavigateTo("/dashboard");
+    }
+
+}

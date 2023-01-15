@@ -1,0 +1,72 @@
+﻿@page "/dashboard"
+@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+
+@*A razor page that displays chart of order statistics*@
+
+
+<h3>Dashboard</h3>
+<h4 class="text-primary">Welcome, @_currentUser.PresentUser?.FullName</h4>
+<Chart Config="_config"></Chart>
+
+
+@code{
+    private BarConfig _config;
+    [CascadingParameter]
+    public GlobalUser _currentUser { get; set; }
+    public List<RecordStatistic> _orderRecord;
+    protected override void OnInitialized()
+    {
+        _orderRecord = RecordService.GetItemQtyRelation();
+
+       
+        if (_orderRecord !=null)
+        {
+            _config = new BarConfig
+                    {
+                        Options = new BarOptions
+                        {
+                            Responsive = true,
+                            Title = new OptionsTitle
+                            {
+                                Display = true,
+                                Text = "Order statistic"
+                            },
+                            Scales = new BarScales
+                            {
+                                YAxes = new List<CartesianAxis>
+                                {
+                                new LinearCartesianAxis
+                                {
+                                    Ticks = new LinearCartesianTicks
+                                    {
+                                        BeginAtZero = true
+                                    }
+                                }
+                                }
+                            }
+                        }
+                    };
+        }
+         var dataset = new BarDataset<int>()
+            {
+                Label = "Ordered quantity",
+                BackgroundColor = "blue",
+                BarThickness = 50
+            };
+
+        foreach (var record in _orderRecord)
+        {
+            _config.Data.Labels.Add(ItemService.GetByItemId(record.ItemId).Name);
+            dataset.Add(record.ItemQuantity);
+        }
+        _config.Data.Datasets.Add(dataset);
+
+    }
+
+    
+}
+
+
+
+

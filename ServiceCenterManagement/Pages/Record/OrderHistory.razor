@@ -1,0 +1,117 @@
+﻿@page "/orderHistory"
+@using ServiceCenterManagement.Data.Model;
+@using ServiceCenterManagement.Data;
+
+@*A razor page that displays the order history of a staff*@
+
+<h3>Your Order History</h3>
+
+<ul class="nav nav-tabs">
+    <li class="nav-item ">
+        <a class='nav-link btn @(_tabFilter == "All" ? "active" : "")' @onclick='()=>TabFilter("All")'>All</a>
+    </li>
+    <li class="nav-item">
+        <a class='nav-link btn @(_tabFilter == "Approved" ? "active" : "")' @onclick='()=>TabFilter("Approved")'>Approved</a>
+    </li>
+    <li class="nav-item">
+        <a class='nav-link btn @(_tabFilter == "Pending" ? "active" : "")' @onclick='()=>TabFilter("Pending")'>Pending</a>
+    </li>
+    <li class="nav-item">
+        <a class='nav-link btn @(_tabFilter == "Pending" ? "active" : "")' @onclick='()=>TabFilter("Rejected")'>Rejected</a>
+    </li>
+</ul>
+
+@*Displayed if the user has no order history*@
+@if(_userRecords.Count == 0)
+{
+    <h3>Sorry no order history</h3>
+}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th> Ordered date</th>
+            <th> Ordered item</th>
+            <th> Quantity requested</th>
+            <th> Approval status</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            IEnumerable<RecordModel> recordList = _userRecords;
+            if (_tabFilter == "Approved")
+            {
+                recordList = recordList.Where(x => x.Status == OrderStatus.Approved);
+            }
+            else if (_tabFilter == "Pending")
+            {
+                recordList = recordList.Where(x => x.Status == OrderStatus.Pending);
+            }
+             else if (_tabFilter == "Rejected")
+            {
+                recordList = recordList.Where(x => x.Status == OrderStatus.Rejected);
+            }
+            foreach (var record in recordList)
+            {
+                <tr>
+                    <td>@record.OrderedDate.ToString("MMM dd, yyyy h:mm tt")</td>
+                    <td>
+                        @{
+                            var item = ItemService.GetByItemId(record.ItemId);
+                            <span>@(item == null ? "Unknown" : item.Name)</span>
+
+                        }
+                    </td>
+                 
+                    <td>@record.QuantityTakenOut</td>
+
+                    <td>
+                        @if(record.Status == OrderStatus.Approved){
+                            <span class="text-success">@record.Status</span>
+                        }
+                        else if (record.Status == OrderStatus.Rejected)
+                        {
+                            <span class="text-danger">@record.Status</span>
+                        }
+                        else
+                        {
+                            <span class="text-primary">@record.Status</span>
+
+                        }
+                    </td>
+                  
+                  
+
+
+
+                </tr>
+            }
+
+         }
+    </tbody>
+    </table>
+
+
+
+@code {
+    [CascadingParameter]
+    public GlobalUser _currentUser { get; set; }
+    public List<RecordModel> _records { get; set; }
+    public List<RecordModel> _userRecords { get; set; }
+    private string _tabFilter = "All";
+
+
+
+    protected override void OnInitialized()
+    {
+        _records = RecordService.GetRecords();
+        _userRecords = _records.Where(x => x.RequestedBy == _currentUser.PresentUser.Id).ToList();
+    }
+
+    private void TabFilter(string status)
+    {
+        _tabFilter = status;
+    }
+
+
+}
